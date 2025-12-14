@@ -1,0 +1,1452 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Download, Plus, Trash2, Edit3, FileText, Loader2, X } from './icons';
+
+const ResumeBuilder = () => {
+  const defaultData = {
+    header: {
+      name: "Dan Garza",
+      title: "Technical Support Strategist",
+      location: "Ventura, CA",
+      phone: "805-616-4676",
+      email: "danraygarza490@gmail.com",
+      linkedin: "linkedin.com/in/dan-garza-mba490"
+    },
+    summary: "Versatile IT operations professional with 10+ years of experience in Microsoft 365 administration, technical documentation, and process automation. Skilled in Exchange Admin, OneDrive Admin, Teams, and SharePoint governance. Experienced in Jira administration (dashboards, Kanban boards, workflow schemes), Confluence knowledge base management, and automation with PowerShell and Power Automate. Adept at Slack and LastPass administration, Okta identity management, and Microsoft MFA security enforcement. Proven ability to translate complex systems into clear documentation and training resources that drive adoption and efficiency. Specialized in platform stewardship, documentation ownership, and process improvement.",
+    customSections: [],
+    skills: [
+      "Microsoft 365 Administration (Teams, SharePoint, Exchange Admin, OneDrive Admin)",
+      "Jira Administration (Dashboards, Kanban Boards, Workflow Schemes)",
+      "Confluence Knowledge Base Management",
+      "PowerShell & Power Automate Workflow Automation",
+      "SharePoint Site Design & Governance",
+      "Slack Administration & Enablement",
+      "LastPass Administration & Credential Governance",
+      "Okta Administration & Identity Management",
+      "Microsoft MFA Administration & Security Policy Enforcement",
+      "ITIL V4 & Agile Methodologies",
+      "Active Directory, Jira Service Desk, ServiceNow, Ivanti, ManageEngine, Zendesk",
+      "Ticket Workflow Optimization & Escalation Management"
+    ],
+    experience: [
+      {
+        id: 1,
+        company: "Avantor",
+        title: "Lead Administrator, IT Ops Site Services",
+        location: "",
+        startDate: "October 2024",
+        endDate: "September 2025",
+        bullets: [
+          "Led IT operations across 3 global sites supporting 500+ users; ensured 99.9% uptime",
+          "Automated onboarding with PowerShell scripts and digital playbooks, achieving 100% Day-One readiness",
+          "Introduced Agile workflows and automated triage, reducing resolution time by 30%",
+          "Administered Microsoft 365 (Exchange, OneDrive, Teams, SharePoint) and Jira (dashboards, Kanban boards, workflows)",
+          "Authored Confluence pages to support repeatable processes and cross-team enablement"
+        ]
+      },
+      {
+        id: 2,
+        company: "AeroVironment",
+        title: "Service Desk Coordinator | IT Support Analyst",
+        location: "",
+        startDate: "June 2023",
+        endDate: "September 2024",
+        bullets: [
+          "Reduced ERP ticket backlog by 40% through analytics and workflow refinement",
+          "Designed custom service desk widget for enhanced visibility across Jira Service Desk and Zendesk",
+          "Facilitated Agile standups and sprint cycles to improve team responsiveness",
+          "Authored Confluence documentation and standardized support procedures",
+          "Supported Microsoft 365 integrations and user enablement initiatives"
+        ]
+      },
+      {
+        id: 3,
+        company: "Teladoc Health",
+        title: "Technical Lead | Knowledge Management | IT Documentation",
+        location: "",
+        startDate: "January 2020",
+        endDate: "March 2023",
+        bullets: [
+          "Improved help desk efficiency by 25% via process reengineering and escalation protocols",
+          "Led rebranding initiative to position Service Desk as IT Business Partner, aligning support with enterprise goals",
+          "Designed and launched global Confluence knowledge base serving 4,000+ users",
+          "Documented 200+ runbooks and led knowledge management initiatives",
+          "Administered Slack, LastPass, Okta, and Microsoft MFA platforms to support secure collaboration and identity management",
+          "Delivered training on Microsoft 365 tools, including Teams and SharePoint"
+        ]
+      }
+    ],
+    education: [
+      {
+        id: 1,
+        degree: "Master of Business Administration",
+        institution: "University of Phoenix",
+        startDate: "January 2023",
+        endDate: "May 2024"
+      },
+      {
+        id: 2,
+        degree: "Bachelor of Science in Information Technology",
+        institution: "University of Phoenix",
+        startDate: "January 2021",
+        endDate: "January 2023"
+      }
+    ],
+    certifications: [
+      "Foundations of Leadership Certificate 1 & 2 - National Society of Leadership and Success - August 2023",
+      "Executive Presence on Video Calls - LinkedIn - April 2022"
+    ]
+  };
+
+  const [resumeData, setResumeData] = useState(defaultData);
+  const [template, setTemplate] = useState('modern');
+  const [editingSection, setEditingSection] = useState(null);
+  const [saveStatus, setSaveStatus] = useState('saved');
+  const [autoSave, setAutoSave] = useState(true);
+  const [showCoverLetter, setShowCoverLetter] = useState(false);
+  const [coverLetterData, setCoverLetterData] = useState({
+    jobTitle: '',
+    company: '',
+    hiringManager: '',
+    content: ''
+  });
+  const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
+  const [showImportResume, setShowImportResume] = useState(false);
+  const [importedResumeText, setImportedResumeText] = useState('');
+  const [analyzingResume, setAnalyzingResume] = useState(false);
+  const [analyzedData, setAnalyzedData] = useState(null);
+
+  // Load from storage on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Try window.storage first
+        const result = await window.storage.get('resume-data');
+        if (result && result.value) {
+          const loadedData = JSON.parse(result.value);
+          // Ensure customSections exists
+          if (!loadedData.customSections) {
+            loadedData.customSections = [];
+          }
+          setResumeData(loadedData);
+        }
+      } catch (error) {
+        // Fallback to localStorage on mobile
+        try {
+          const localData = localStorage.getItem('dan-resume-data');
+          if (localData) {
+            const loadedData = JSON.parse(localData);
+            if (!loadedData.customSections) {
+              loadedData.customSections = [];
+            }
+            setResumeData(loadedData);
+          }
+        } catch (e) {
+          console.log('No saved data found, using defaults');
+        }
+      }
+    };
+    loadData();
+  }, []);
+
+  // Auto-save
+  const saveData = async (data) => {
+    if (!autoSave) {
+      setSaveStatus('unsaved');
+      return;
+    }
+    setSaveStatus('saving');
+    try {
+      // Try window.storage first
+      const result = await window.storage.set('resume-data', JSON.stringify(data));
+      if (result) {
+        setSaveStatus('saved');
+      } else {
+        throw new Error('Storage returned null');
+      }
+    } catch (error) {
+      // Fallback to localStorage for mobile
+      try {
+        localStorage.setItem('dan-resume-data', JSON.stringify(data));
+        setSaveStatus('saved');
+      } catch (e) {
+        setSaveStatus('error');
+        console.error('Both storage methods failed:', error, e);
+      }
+    }
+  };
+
+  const manualSave = async () => {
+    setSaveStatus('saving');
+    try {
+      // Try window.storage first
+      const result = await window.storage.set('resume-data', JSON.stringify(resumeData));
+      if (result) {
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('saved'), 2000);
+      } else {
+        throw new Error('Storage returned null');
+      }
+    } catch (error) {
+      // Fallback to localStorage for mobile
+      try {
+        localStorage.setItem('dan-resume-data', JSON.stringify(resumeData));
+        setSaveStatus('saved');
+      } catch (e) {
+        setSaveStatus('error');
+        console.error('Save failed:', error, e);
+        alert('Save failed on mobile. Your edits are still visible but may not persist after closing the app.');
+      }
+    }
+  };
+
+  const updateField = (section, field, value) => {
+    const newData = { ...resumeData };
+    if (section === 'header') {
+      newData.header[field] = value;
+    } else if (section === 'summary') {
+      newData.summary = value;
+    }
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const addSkill = () => {
+    const newData = { ...resumeData };
+    newData.skills.push("New Skill");
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const updateSkill = (index, value) => {
+    const newData = { ...resumeData };
+    newData.skills[index] = value;
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const deleteSkill = (index) => {
+    const newData = { ...resumeData };
+    newData.skills.splice(index, 1);
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const addExperience = () => {
+    const newData = { ...resumeData };
+    newData.experience.push({
+      id: Date.now(),
+      company: "Company Name",
+      title: "Job Title",
+      location: "",
+      startDate: "Month Year",
+      endDate: "Month Year",
+      bullets: ["Achievement or responsibility"]
+    });
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const updateExperience = (id, field, value) => {
+    const newData = { ...resumeData };
+    const exp = newData.experience.find(e => e.id === id);
+    if (exp) exp[field] = value;
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const addBullet = (expId) => {
+    const newData = { ...resumeData };
+    const exp = newData.experience.find(e => e.id === expId);
+    if (exp) exp.bullets.push("New achievement");
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const updateBullet = (expId, bulletIndex, value) => {
+    const newData = { ...resumeData };
+    const exp = newData.experience.find(e => e.id === expId);
+    if (exp) exp.bullets[bulletIndex] = value;
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const deleteBullet = (expId, bulletIndex) => {
+    const newData = { ...resumeData };
+    const exp = newData.experience.find(e => e.id === expId);
+    if (exp) exp.bullets.splice(bulletIndex, 1);
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const deleteExperience = (id) => {
+    const newData = { ...resumeData };
+    newData.experience = newData.experience.filter(e => e.id !== id);
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const addCustomSection = () => {
+    const newData = { ...resumeData };
+    newData.customSections.push({
+      id: Date.now(),
+      title: "Custom Section",
+      items: ["Item 1"]
+    });
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const updateCustomSection = (id, field, value) => {
+    const newData = { ...resumeData };
+    const section = newData.customSections.find(s => s.id === id);
+    if (section) section[field] = value;
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const deleteCustomSection = (id) => {
+    const newData = { ...resumeData };
+    newData.customSections = newData.customSections.filter(s => s.id !== id);
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const addCustomItem = (sectionId) => {
+    const newData = { ...resumeData };
+    const section = newData.customSections.find(s => s.id === sectionId);
+    if (section) section.items.push("New item");
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const updateCustomItem = (sectionId, itemIndex, value) => {
+    const newData = { ...resumeData };
+    const section = newData.customSections.find(s => s.id === sectionId);
+    if (section) section.items[itemIndex] = value;
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const deleteCustomItem = (sectionId, itemIndex) => {
+    const newData = { ...resumeData };
+    const section = newData.customSections.find(s => s.id === sectionId);
+    if (section) section.items.splice(itemIndex, 1);
+    setResumeData(newData);
+    saveData(newData);
+  };
+
+  const exportToPDF = () => {
+    try {
+      // Hide all non-resume elements
+      const style = document.createElement('style');
+      style.id = 'print-styles';
+      style.textContent = `
+        @media print {
+          body * { visibility: hidden; }
+          #resume-preview, #resume-preview * { visibility: visible; }
+          #resume-preview { position: absolute; left: 0; top: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // Trigger print
+      window.print();
+      
+      // Clean up
+      setTimeout(() => {
+        const styleEl = document.getElementById('print-styles');
+        if (styleEl) styleEl.remove();
+      }, 1000);
+    } catch (error) {
+      alert('Print dialog failed to open. Please try using Ctrl+P (or Cmd+P on Mac) to print, then select "Save as PDF" in the print dialog.');
+    }
+  };
+
+  const exportToWord = () => {
+    try {
+      const htmlContent = document.getElementById('resume-preview').innerHTML;
+      
+      if (!htmlContent) {
+        alert('Could not find resume content to export. Please try again.');
+        return;
+      }
+      
+      const wordDoc = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+          <head>
+            <meta charset='utf-8'>
+            <title>Resume</title>
+            <style>
+              body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.4; }
+              .page { max-width: 8.5in; margin: 0 auto; padding: 0.75in; }
+              h1 { font-size: 18pt; font-weight: bold; margin-bottom: 5px; }
+              h2 { font-size: 12pt; margin-bottom: 8px; }
+              h3 { font-size: 12pt; font-weight: bold; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #bdc3c7; }
+              p { margin-bottom: 15px; text-align: justify; }
+            </style>
+          </head>
+          <body>${htmlContent}</body>
+        </html>
+      `;
+      
+      const blob = new Blob(['\ufeff', wordDoc], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${resumeData.header.name.replace(/\s+/g, '_')}_Resume.doc`;
+      
+      // For mobile compatibility
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      // Trigger download
+      link.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      // Success feedback
+      alert('Resume exported! Check your downloads folder.');
+      
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed on mobile. Try using the desktop version for Word export, or take a screenshot of your resume.');
+    }
+  };
+
+  const generateCoverLetter = async () => {
+    if (!coverLetterData.jobTitle || !coverLetterData.company) {
+      alert('Please enter at least a job title and company name');
+      return;
+    }
+
+    setGeneratingCoverLetter(true);
+    
+    try {
+      const prompt = `Based on this resume information, generate a professional cover letter for the position of ${coverLetterData.jobTitle} at ${coverLetterData.company}${coverLetterData.hiringManager ? `, addressed to ${coverLetterData.hiringManager}` : ''}.
+
+Resume Summary: ${resumeData.summary}
+
+Recent Experience:
+${resumeData.experience.slice(0, 2).map(exp => `
+${exp.title} at ${exp.company}
+- ${exp.bullets.join('\n- ')}
+`).join('\n')}
+
+Key Skills: ${resumeData.skills.slice(0, 8).join(', ')}
+
+Write a compelling cover letter that:
+1. Opens with enthusiasm for the specific role
+2. Highlights 2-3 relevant achievements from the resume
+3. Connects my experience to the role requirements
+4. Shows knowledge of the company (be generic if company is unknown)
+5. Closes with a strong call to action
+6. Keep it to 3-4 paragraphs, professional but conversational tone
+7. Format it properly with date, addresses, greeting, and signature block
+
+Return ONLY the cover letter text, no preamble or explanation.`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+      const generatedContent = data.content.find(c => c.type === 'text')?.text || '';
+      
+      setCoverLetterData(prev => ({ ...prev, content: generatedContent }));
+      
+    } catch (error) {
+      console.error('Error generating cover letter:', error);
+      alert('Failed to generate cover letter. Please try again.');
+    } finally {
+      setGeneratingCoverLetter(false);
+    }
+  };
+
+  const exportCoverLetterToWord = () => {
+    const wordDoc = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset='utf-8'>
+          <title>Cover Letter</title>
+          <style>
+            body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.6; }
+            .page { max-width: 6.5in; margin: 0 auto; padding: 1in; }
+            p { margin-bottom: 12pt; }
+          </style>
+        </head>
+        <body>
+          <div class="page">${coverLetterData.content.replace(/\n/g, '<br>')}</div>
+        </body>
+      </html>
+    `;
+    
+    const blob = new Blob(['\ufeff', wordDoc], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${resumeData.header.name.replace(/\s+/g, '_')}_CoverLetter.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const analyzeImportedResume = async () => {
+    if (!importedResumeText.trim()) {
+      alert('Please paste or type your resume text first');
+      return;
+    }
+
+    setAnalyzingResume(true);
+    
+    try {
+      const prompt = `Analyze this resume and extract the following information in JSON format ONLY (no other text):
+
+${importedResumeText}
+
+Extract and return ONLY a JSON object with this structure:
+{
+  "title": "professional title from the resume",
+  "summary": "professional summary paragraph",
+  "skills": ["skill 1", "skill 2", ...],
+  "experience": [
+    {
+      "company": "company name",
+      "title": "job title",
+      "startDate": "start date",
+      "endDate": "end date",
+      "bullets": ["bullet 1", "bullet 2", ...]
+    }
+  ]
+}
+
+Important: Return ONLY valid JSON, no markdown, no preamble, no explanation.`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+      const content = data.content.find(c => c.type === 'text')?.text || '';
+      
+      // Clean up the response and parse JSON
+      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const parsed = JSON.parse(cleanContent);
+      
+      setAnalyzedData(parsed);
+      
+    } catch (error) {
+      console.error('Error analyzing resume:', error);
+      alert('Failed to analyze resume. Please make sure you pasted valid resume text and try again.');
+    } finally {
+      setAnalyzingResume(false);
+    }
+  };
+
+  const applyResumeUpdates = () => {
+    if (!analyzedData) return;
+
+    const newData = { ...resumeData };
+    
+    // Update title
+    if (analyzedData.title) {
+      newData.header.title = analyzedData.title;
+    }
+    
+    // Update summary
+    if (analyzedData.summary) {
+      newData.summary = analyzedData.summary;
+    }
+    
+    // Update skills
+    if (analyzedData.skills && analyzedData.skills.length > 0) {
+      newData.skills = analyzedData.skills;
+    }
+    
+    // Update experience
+    if (analyzedData.experience && analyzedData.experience.length > 0) {
+      newData.experience = analyzedData.experience.map((exp, idx) => ({
+        id: Date.now() + idx,
+        company: exp.company || "Company Name",
+        title: exp.title || "Job Title",
+        location: exp.location || "",
+        startDate: exp.startDate || "Month Year",
+        endDate: exp.endDate || "Month Year",
+        bullets: exp.bullets || []
+      }));
+    }
+    
+    setResumeData(newData);
+    saveData(newData);
+    
+    // Close the import modal
+    setShowImportResume(false);
+    setImportedResumeText('');
+    setAnalyzedData(null);
+    
+    alert('Resume updated successfully!');
+  };
+
+  const ModernTemplate = () => (
+    <div id="resume-preview" className="bg-white p-8 shadow-lg" style={{ width: '8.5in', minHeight: '11in' }}>
+      <div className="text-center border-b-2 border-blue-900 pb-4 mb-4">
+        <h1 className="text-3xl font-bold text-blue-900 mb-1">{resumeData.header.name}</h1>
+        <h2 className="text-lg text-gray-700 mb-2">{resumeData.header.title}</h2>
+        <p className="text-sm text-gray-600">
+          {resumeData.header.location} | {resumeData.header.phone} | {resumeData.header.email}
+          <br />
+          {resumeData.header.linkedin}
+        </p>
+      </div>
+
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">
+          Professional Summary
+        </h3>
+        <p className="text-sm text-justify leading-relaxed">{resumeData.summary}</p>
+      </div>
+
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">
+          Core Competencies
+        </h3>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          {resumeData.skills.map((skill, idx) => (
+            <div key={idx} className="text-sm">- {skill}</div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">
+          Professional Experience
+        </h3>
+        {resumeData.experience.map((exp) => (
+          <div key={exp.id} className="mb-3">
+            <div className="flex justify-between items-baseline mb-1">
+              <span className="font-bold text-sm">{exp.company}</span>
+              <span className="text-xs italic text-gray-600">{exp.startDate} - {exp.endDate}</span>
+            </div>
+            <div className="italic text-sm text-gray-700 mb-1">{exp.title}</div>
+            <ul className="ml-4">
+              {exp.bullets.map((bullet, idx) => (
+                <li key={idx} className="text-sm mb-1">- {bullet}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">
+          Education
+        </h3>
+        {resumeData.education.map((edu) => (
+          <div key={edu.id} className="text-sm mb-1">
+            <span className="font-bold">{edu.degree}</span> - <span className="italic">{edu.institution}</span> - {edu.startDate} - {edu.endDate}
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">
+          Certifications
+        </h3>
+        {resumeData.certifications.map((cert, idx) => (
+          <div key={idx} className="text-sm mb-1">- {cert}</div>
+        ))}
+      </div>
+
+        {resumeData.customSections && resumeData.customSections.map((section) => (
+          <div key={section.id} className="mt-4">
+            <h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">
+              {section.title}
+            </h3>
+            {section.items.map((item, idx) => (
+              <div key={idx} className="text-sm mb-1">- {item}</div>
+            ))}
+          </div>
+        ))}
+    </div>
+  );
+
+  const ClassicTemplate = () => (
+    <div id="resume-preview" className="bg-white p-8 shadow-lg" style={{ width: '8.5in', minHeight: '11in' }}>
+      <div className="text-center mb-4">
+        <h1 className="text-3xl font-bold mb-1">{resumeData.header.name}</h1>
+        <p className="text-sm">
+          {resumeData.header.location} | {resumeData.header.phone} | {resumeData.header.email} | {resumeData.header.linkedin}
+        </p>
+      </div>
+
+      <hr className="border-t-2 border-black mb-4" />
+
+      <div className="mb-4">
+        <h3 className="text-sm font-bold uppercase mb-2">Professional Summary</h3>
+        <p className="text-sm text-justify leading-relaxed">{resumeData.summary}</p>
+      </div>
+
+      <div className="mb-4">
+        <h3 className="text-sm font-bold uppercase mb-2">Core Competencies</h3>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          {resumeData.skills.map((skill, idx) => (
+            <div key={idx} className="text-sm">- {skill}</div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <h3 className="text-sm font-bold uppercase mb-2">Professional Experience</h3>
+        {resumeData.experience.map((exp) => (
+          <div key={exp.id} className="mb-3">
+            <div className="flex justify-between items-baseline">
+              <span className="font-bold text-sm">{exp.company}</span>
+              <span className="text-xs italic">{exp.startDate} - {exp.endDate}</span>
+            </div>
+            <div className="italic text-sm mb-1">{exp.title}</div>
+            <ul className="ml-4">
+              {exp.bullets.map((bullet, idx) => (
+                <li key={idx} className="text-sm mb-1">- {bullet}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-4">
+        <h3 className="text-sm font-bold uppercase mb-2">Education</h3>
+        {resumeData.education.map((edu) => (
+          <div key={edu.id} className="text-sm mb-1">
+            <span className="font-bold">{edu.degree}</span> - <span className="italic">{edu.institution}</span> - {edu.startDate} - {edu.endDate}
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <h3 className="text-sm font-bold uppercase mb-2">Certifications</h3>
+        {resumeData.certifications.map((cert, idx) => (
+          <div key={idx} className="text-sm mb-1">- {cert}</div>
+        ))}
+      </div>
+
+        {resumeData.customSections && resumeData.customSections.map((section) => (
+          <div key={section.id} className="mt-4">
+            <h3 className="text-sm font-bold uppercase mb-2">
+              {section.title}
+            </h3>
+            {section.items.map((item, idx) => (
+              <div key={idx} className="text-sm mb-1">- {item}</div>
+            ))}
+          </div>
+        ))}
+    </div>
+  );
+
+  const ATSTemplate = () => (
+    <div id="resume-preview" className="bg-white p-8 shadow-lg" style={{ width: '8.5in', minHeight: '11in' }}>
+      {/* Header - Left aligned for ATS */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold mb-1">{resumeData.header.name}</h1>
+        <h2 className="text-base font-semibold text-gray-700 mb-2">{resumeData.header.title}</h2>
+        <div className="text-xs leading-relaxed">
+          <div>{resumeData.header.location}</div>
+          <div>Phone: {resumeData.header.phone}</div>
+          <div>Email: {resumeData.header.email}</div>
+          <div>LinkedIn: {resumeData.header.linkedin}</div>
+        </div>
+      </div>
+
+      <hr className="border-t border-gray-400 mb-3" />
+
+      {/* Profile/Summary */}
+      <div className="mb-3">
+        <h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">
+          Profile
+        </h3>
+        <p className="text-xs leading-relaxed">{resumeData.summary}</p>
+      </div>
+
+      {/* Skills */}
+      <div className="mb-3">
+        <h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">
+          Skills
+        </h3>
+        <ul className="ml-4">
+          {resumeData.skills.map((skill, idx) => (
+            <li key={idx} className="text-xs mb-1">- {skill}</li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Professional Experience */}
+      <div className="mb-3">
+        <h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">
+          Work Experience
+        </h3>
+        {resumeData.experience.map((exp) => (
+          <div key={exp.id} className="mb-3">
+            <div className="font-bold text-xs uppercase">{exp.title}</div>
+            <div className="text-xs mb-1">
+              {exp.company} | {exp.startDate} - {exp.endDate}
+            </div>
+            <ul className="ml-4 mt-1">
+              {exp.bullets.map((bullet, idx) => (
+                <li key={idx} className="text-xs mb-1">- {bullet}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Education */}
+      <div className="mb-3">
+        <h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">
+          Education
+        </h3>
+        {resumeData.education.map((edu) => (
+          <div key={edu.id} className="text-xs mb-2">
+            <div className="font-bold">{edu.degree}</div>
+            <div>{edu.institution} | {edu.startDate} - {edu.endDate}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Certifications */}
+      {resumeData.certifications.length > 0 && (
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">
+            Certifications
+          </h3>
+          <ul className="ml-4">
+            {resumeData.certifications.map((cert, idx) => (
+              <li key={idx} className="text-xs mb-1">- {cert}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Custom Sections */}
+      {resumeData.customSections && resumeData.customSections.map((section) => (
+        <div key={section.id} className="mb-3">
+          <h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">
+            {section.title}
+          </h3>
+        <ul className="ml-4">
+          {section.items.map((item, idx) => (
+            <li key={idx} className="text-xs mb-1">- {item}</li>
+          ))}
+        </ul>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b border-gray-200 px-6 py-4 print:hidden">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Dan's Resume Builder</h1>
+              <p className="text-sm text-gray-500">
+                {saveStatus === 'saving' && 'Saving...'}
+                {saveStatus === 'saved' && 'All changes saved'}
+                {saveStatus === 'unsaved' && 'Unsaved changes'}
+                {saveStatus === 'error' && 'Save failed'}
+                <span className="ml-2 text-xs text-gray-400">v2.5</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={autoSave}
+                  onChange={(e) => setAutoSave(e.target.checked)}
+                  className="rounded"
+                />
+                Auto-save
+              </label>
+              <button
+                onClick={manualSave}
+                className="flex items-center gap-2 bg-gray-600 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 text-sm"
+              >
+                Save Now
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowImportResume(!showImportResume)}
+              className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+            >
+              <FileText size={18} />
+              Import Resume
+            </button>
+            <button
+              onClick={() => setShowCoverLetter(!showCoverLetter)}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+            >
+              <FileText size={18} />
+              Cover Letter
+            </button>
+            <select 
+              value={template}
+              onChange={(e) => setTemplate(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="modern">Modern Template</option>
+              <option value="classic">Classic Template</option>
+              <option value="ats">ATS-Optimized Template</option>
+            </select>
+            <button 
+              onClick={exportToPDF}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
+              <Download size={18} />
+              Export PDF
+            </button>
+            <button 
+              onClick={exportToWord}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            >
+              <Download size={18} />
+              Export Word
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {showImportResume && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Import & Update Resume</h2>
+                <button onClick={() => {
+                  setShowImportResume(false);
+                  setImportedResumeText('');
+                  setAnalyzedData(null);
+                }} className="text-gray-500 hover:text-gray-700">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-4">
+                Paste your tailored resume text below. AI will analyze it and extract the professional title, summary, skills, and experience bullets.
+              </p>
+
+              <textarea
+                value={importedResumeText}
+                onChange={(e) => setImportedResumeText(e.target.value)}
+                placeholder="Paste your resume text here..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg h-64 font-mono text-sm mb-4"
+              />
+
+              {!analyzedData ? (
+                <button
+                  onClick={analyzeImportedResume}
+                  disabled={analyzingResume}
+                  className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
+                >
+                  {analyzingResume ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Analyzing Resume...
+                    </>
+                  ) : (
+                    'Analyze Resume'
+                  )}
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h3 className="font-bold text-green-900 mb-2">Resume analyzed!</h3>
+                    <div className="text-sm text-gray-700 space-y-2">
+                      <p><strong>Title:</strong> {analyzedData.title}</p>
+                      <p><strong>Summary:</strong> {analyzedData.summary?.substring(0, 100)}...</p>
+                      <p><strong>Skills Found:</strong> {analyzedData.skills?.length || 0}</p>
+                      <p><strong>Experience Entries:</strong> {analyzedData.experience?.length || 0}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                      <button
+                        onClick={applyResumeUpdates}
+                        className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 font-bold"
+                      >
+                        Apply Updates
+                      </button>
+                    <button
+                      onClick={() => {
+                        setAnalyzedData(null);
+                        setImportedResumeText('');
+                      }}
+                      className="flex-1 bg-gray-500 text-white px-4 py-3 rounded-lg hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCoverLetter && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">AI Cover Letter Generator</h2>
+                <button onClick={() => setShowCoverLetter(false)} className="text-gray-500 hover:text-gray-700">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <input
+                  type="text"
+                  placeholder="Job Title (e.g., IT Support Manager)"
+                  value={coverLetterData.jobTitle}
+                  onChange={(e) => setCoverLetterData({...coverLetterData, jobTitle: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="Company Name"
+                  value={coverLetterData.company}
+                  onChange={(e) => setCoverLetterData({...coverLetterData, company: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="Hiring Manager Name (optional)"
+                  value={coverLetterData.hiringManager}
+                  onChange={(e) => setCoverLetterData({...coverLetterData, hiringManager: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+                <button
+                  onClick={generateCoverLetter}
+                  disabled={generatingCoverLetter}
+                  className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
+                >
+                  {generatingCoverLetter ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate Cover Letter'
+                  )}
+                </button>
+              </div>
+
+              {coverLetterData.content && (
+                <div className="space-y-4">
+                  <textarea
+                    value={coverLetterData.content}
+                    onChange={(e) => setCoverLetterData({...coverLetterData, content: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg h-96 font-mono text-sm"
+                  />
+                  <button
+                    onClick={exportCoverLetterToWord}
+                    className="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                  >
+                    <Download size={18} />
+                    Download as Word Document
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto p-6 print:p-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-1">
+          <div className="space-y-4 print:hidden">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold">Header Information</h2>
+                <button
+                  onClick={() => setEditingSection(editingSection === 'header' ? null : 'header')}
+                  className="text-blue-600 hover:text-blue-700"
+                >
+                  <Edit3 size={18} />
+                </button>
+              </div>
+              {editingSection === 'header' ? (
+                <div className="space-y-3">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={resumeData.header.name}
+                      onChange={(e) => updateField('header', 'name', e.target.value)}
+                      className="w-full px-3 py-2 pr-20 border border-gray-300 rounded"
+                      placeholder="Full Name"
+                    />
+                    <button
+                      onClick={() => updateField('header', 'name', '')}
+                      className="absolute right-2 top-2 text-xs text-gray-500 hover:text-red-600 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={resumeData.header.title}
+                      onChange={(e) => updateField('header', 'title', e.target.value)}
+                      className="w-full px-3 py-2 pr-20 border border-gray-300 rounded"
+                      placeholder="Professional Title"
+                    />
+                    <button
+                      onClick={() => updateField('header', 'title', '')}
+                      className="absolute right-2 top-2 text-xs text-gray-500 hover:text-red-600 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={resumeData.header.location}
+                      onChange={(e) => updateField('header', 'location', e.target.value)}
+                      className="w-full px-3 py-2 pr-20 border border-gray-300 rounded"
+                      placeholder="Location"
+                    />
+                    <button
+                      onClick={() => updateField('header', 'location', '')}
+                      className="absolute right-2 top-2 text-xs text-gray-500 hover:text-red-600 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={resumeData.header.phone}
+                      onChange={(e) => updateField('header', 'phone', e.target.value)}
+                      className="w-full px-3 py-2 pr-20 border border-gray-300 rounded"
+                      placeholder="Phone"
+                    />
+                    <button
+                      onClick={() => updateField('header', 'phone', '')}
+                      className="absolute right-2 top-2 text-xs text-gray-500 hover:text-red-600 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={resumeData.header.email}
+                      onChange={(e) => updateField('header', 'email', e.target.value)}
+                      className="w-full px-3 py-2 pr-20 border border-gray-300 rounded"
+                      placeholder="Email"
+                    />
+                    <button
+                      onClick={() => updateField('header', 'email', '')}
+                      className="absolute right-2 top-2 text-xs text-gray-500 hover:text-red-600 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={resumeData.header.linkedin}
+                      onChange={(e) => updateField('header', 'linkedin', e.target.value)}
+                      className="w-full px-3 py-2 pr-20 border border-gray-300 rounded"
+                      placeholder="LinkedIn URL"
+                    />
+                    <button
+                      onClick={() => updateField('header', 'linkedin', '')}
+                      className="absolute right-2 top-2 text-xs text-gray-500 hover:text-red-600 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-600">
+                  <p className="font-semibold">{resumeData.header.name}</p>
+                  <p>{resumeData.header.title}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold">Professional Summary</h2>
+                <button
+                  onClick={() => setEditingSection(editingSection === 'summary' ? null : 'summary')}
+                  className="text-blue-600 hover:text-blue-700"
+                >
+                  <Edit3 size={18} />
+                </button>
+              </div>
+              {editingSection === 'summary' ? (
+                <div className="relative">
+                  <textarea
+                    value={resumeData.summary}
+                    onChange={(e) => updateField('summary', null, e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded h-32"
+                    placeholder="Professional summary..."
+                  />
+                  <button
+                    onClick={() => updateField('summary', null, '')}
+                    className="absolute right-2 top-2 text-xs text-gray-500 hover:text-red-600 bg-gray-100 px-2 py-1 rounded"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600 line-clamp-3">{resumeData.summary}</p>
+              )}
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold">Skills</h2>
+                <button
+                  onClick={addSkill}
+                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                >
+                  <Plus size={18} />
+                  Add Skill
+                </button>
+              </div>
+              <div className="space-y-2">
+                {resumeData.skills.map((skill, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={skill}
+                      onChange={(e) => updateSkill(idx, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                    />
+                    <button
+                      onClick={() => deleteSkill(idx)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold">Experience</h2>
+                <button
+                  onClick={addExperience}
+                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                >
+                  <Plus size={18} />
+                  Add Job
+                </button>
+              </div>
+              <div className="space-y-4">
+                {resumeData.experience.map((exp) => (
+                  <div key={exp.id} className="border border-gray-200 rounded p-4">
+                    <div className="flex justify-between mb-3">
+                      <h3 className="font-semibold text-sm">{exp.company}</h3>
+                      <button
+                        onClick={() => deleteExperience(exp.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={exp.company}
+                        onChange={(e) => updateExperience(exp.id, 'company', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                        placeholder="Company"
+                      />
+                      <input
+                        type="text"
+                        value={exp.title}
+                        onChange={(e) => updateExperience(exp.id, 'title', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                        placeholder="Job Title"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={exp.startDate}
+                          onChange={(e) => updateExperience(exp.id, 'startDate', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded text-sm"
+                          placeholder="Start Date"
+                        />
+                        <input
+                          type="text"
+                          value={exp.endDate}
+                          onChange={(e) => updateExperience(exp.id, 'endDate', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded text-sm"
+                          placeholder="End Date"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        {exp.bullets.map((bullet, bulletIdx) => (
+                          <div key={bulletIdx} className="flex gap-2">
+                            <textarea
+                              value={bullet}
+                              onChange={(e) => updateBullet(exp.id, bulletIdx, e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                              rows="2"
+                            />
+                            <button
+                              onClick={() => deleteBullet(exp.id, bulletIdx)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => addBullet(exp.id)}
+                          className="text-sm text-blue-600 hover:text-blue-700"
+                        >
+                          + Add Bullet
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold">Custom Sections</h2>
+                <button
+                  onClick={addCustomSection}
+                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                >
+                  <Plus size={18} />
+                  Add Section
+                </button>
+              </div>
+              <div className="space-y-4">
+                {resumeData.customSections && resumeData.customSections.map((section) => (
+                  <div key={section.id} className="border border-gray-200 rounded p-4">
+                    <div className="flex justify-between mb-3">
+                      <input
+                        type="text"
+                        value={section.title}
+                        onChange={(e) => updateCustomSection(section.id, 'title', e.target.value)}
+                        className="font-semibold text-sm px-2 py-1 border border-gray-300 rounded"
+                        placeholder="Section Title"
+                      />
+                      <button
+                        onClick={() => deleteCustomSection(section.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {section.items.map((item, itemIdx) => (
+                        <div key={itemIdx} className="flex gap-2">
+                          <textarea
+                            value={item}
+                            onChange={(e) => updateCustomItem(section.id, itemIdx, e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                            rows="2"
+                            placeholder="Item content"
+                          />
+                          <button
+                            onClick={() => deleteCustomItem(section.id, itemIdx)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => addCustomItem(section.id)}
+                        className="text-sm text-blue-600 hover:text-blue-700"
+                      >
+                        + Add Item
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {(!resumeData.customSections || resumeData.customSections.length === 0) && (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    No custom sections yet. Click "Add Section" to create one!
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="print:col-span-1">
+            <div className="sticky top-6 print:static">
+              <div className="bg-gray-100 p-2 rounded-t-lg print:hidden">
+                <p className="text-sm text-gray-600 text-center">Live Preview</p>
+              </div>
+              <div className="print:shadow-none">
+                {template === 'modern' ? <ModernTemplate /> : template === 'ats' ? <ATSTemplate /> : <ClassicTemplate />}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #resume-preview, #resume-preview * {
+            visibility: visible;
+          }
+          #resume-preview {
+            position: absolute;
+            left: 0;
+            top: 0;
+          }
+          @page {
+            margin: 0.5in;
+            size: letter;
+          }
+        }
+        @media screen {
+          .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default ResumeBuilder;

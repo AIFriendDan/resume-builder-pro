@@ -1,0 +1,189 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset='utf-8'>
+<title>Dan Garza Resume</title>
+<style>
+    /* Basic Page Setup for Word */
+    @page {
+        size: 8.5in 11in;
+        margin: 0.5in 0.5in 0.5in 0.5in; /* Narrow margins to fit 4 jobs */
+        mso-header-margin: 0.5in;
+        mso-footer-margin: 0.5in;
+    }
+    body {
+        font-family: "Calibri", "Arial", sans-serif;
+        font-size: 10.5pt;
+        line-height: 1.2;
+        color: #000000;
+    }
+    
+    /* Headings */
+    h1 {
+        font-size: 22pt;
+        font-weight: bold;
+        color: #2F5496; /* The Blue from your sample */
+        text-align: center;
+        margin-bottom: 2pt;
+        margin-top: 0;
+    }
+    h2 {
+        font-size: 11pt;
+        text-align: center;
+        font-weight: normal;
+        margin-top: 0;
+        margin-bottom: 8pt;
+        color: #000000;
+    }
+    h3 {
+        font-size: 11pt;
+        font-weight: bold;
+        color: #2F5496;
+        text-transform: uppercase;
+        border-bottom: 1px solid #BDC3C7;
+        padding-bottom: 2pt;
+        margin-top: 12pt;
+        margin-bottom: 6pt;
+    }
+    
+    /* Contact Info */
+    .contact-info {
+        text-align: center;
+        font-size: 10pt;
+        margin-bottom: 10pt;
+    }
+    
+    /* Standard Text */
+    p {
+        margin-top: 0;
+        margin-bottom: 4pt;
+        text-align: justify;
+    }
+    
+    /* Bullets */
+    ul {
+        margin-top: 0;
+        margin-bottom: 8pt;
+        padding-left: 0.25in;
+    }
+    li {
+        margin-bottom: 2pt;
+        list-style-type: disc; /* Standard bullet */
+    }
+
+    /* Experience Header Styling */
+    .job-header {
+        font-weight: bold;
+        font-size: 11pt;
+        margin-bottom: 0;
+    }
+    .job-subheader {
+        font-style: italic;
+        font-size: 10pt;
+        margin-bottom: 2pt;
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    /* Two Column Table for Skills */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        border: none;
+        margin-bottom: 0;
+    }
+    td {
+        vertical-align: top;
+        padding: 0;
+        width: 50%;
+    }
+    .skill-item {
+        font-size: 10pt;
+        margin-bottom: 1pt;
+    }
+</style>
+</head>
+<body>
+
+<h1>Dan Garza</h1>
+<h2>IT Support Specialist | Systems Administration | Compliance &amp; Automation</h2>
+<div class="contact-info">
+    Ventura, CA | 805-616-4676 | danraygarza490@gmail.com | linkedin.com/in/dan-garza-mba490
+</div>
+
+<h3>Professional Summary</h3>
+<p>
+    IT Support Specialist with 10+ years of experience delivering Tier 1-3 technical support, system administration, and asset management across fast-paced startups and regulated enterprise environments. Expert in bridging the gap between complex compliance frameworks (SOC 2, FedRAMP) and hands-on daily operations. Proven ability to manage Google Workspace, Slack, and Windows/macOS ecosystems while codifying ad-hoc processes into scalable documentation.
+</p>
+
+<h3>Core Competencies</h3>
+<table>
+    <tr>
+        <td>
+            <div class="skill-item">• Tier 1-3 Help Desk &amp; Remote Support</div>
+            <div class="skill-item">• Root Cause Analysis</div>
+            <div class="skill-item">• Google Workspace (G-Suite) &amp; Slack Admin</div>
+            <div class="skill-item">• Microsoft 365 &amp; Active Directory</div>
+            <div class="skill-item">• Okta &amp; MFA Implementation</div>
+            <div class="skill-item">• Jamf &amp; Intune MDM</div>
+        </td>
+        <td>
+            <div class="skill-item">• Onboarding/Offboarding Automation</div>
+            <div class="skill-item">• Asset Lifecycle Management</div>
+            <div class="skill-item">• SOP Creation &amp; Documentation</div>
+            <div class="skill-item">• Compliance (CMMC, SOC 2, FedRAMP)</div>
+            <div class="skill-item">• System Audits &amp; Preventive Maintenance</div>
+            <div class="skill-item">• User Access Management</div>
+        </td>
+    </tr>
+</table>
+
+<h3>Professional Experience</h3>
+
+<p class="job-header">Lead Administrator, IT Ops Site Services</p>
+<p class="job-subheader">AVANTOR | Oct 2024 – Sep 2025</p>
+<ul>
+    <li>Served as primary point of contact for IT operations, providing Tier 1-3 support and resolving hardware, software, and network connectivity issues.</li>
+    <li>Managed asset lifecycle; provisioned 80+ laptops and managed collection for 30+ devices, ensuring seamless onboarding and offboarding.</li>
+    <li>Automated recurring onboarding workflows using PowerShell, achieving 100% "Day-One" readiness for new hires and reducing manual setup time.</li>
+    <li>Partnered with HR and Security to codify IT processes, revising SOPs and runbooks to align daily Service Desk operations with CMMC 2.0 compliance standards.</li>
+</ul>
+
+<p class="job-header">Service Desk Coordinator | IT Support Analyst</p>
+<p class="job-subheader">AEROVIRONMENT | Jun 2023 – Sep 2024</p>
+<ul>
+    <li>Supported a user base of 2,000+ employees across dispersed U.S. sites, serving as the first point of contact for technical assistance.</li>
+    <li>Coordinated and executed remote onboarding for new hires, provisioning 2–3 laptops weekly and conducting new user training.</li>
+    <li>Standardized ad-hoc support processes by authoring SOPs for USB security and password management during a critical CMMC transition.</li>
+    <li>Reduced ERP ticket backlog by 40% through workflow refinement and root cause analysis of recurring system issues.</li>
+</ul>
+
+<p class="job-header">IT Support Administrator (Startup Environment)</p>
+<p class="job-subheader">UPMORTEM | Mar 2023 – Jun 2023</p>
+<ul>
+    <li>Established IT operations for a high-growth startup, managing all incoming hardware/software requests as the sole point of contact.</li>
+    <li>Administered SaaS stack (Google Workspace, Slack), ensuring proper access controls and security.</li>
+    <li>Streamlined asset management by configuring laptops with custom images to meet specific business needs.</li>
+</ul>
+
+<p class="job-header">Technical Lead | Knowledge Management</p>
+<p class="job-subheader">TELADOC HEALTH | Jan 2020 – Mar 2023</p>
+<ul>
+    <li>Designed and optimized Jira Service Desk workflows with Slack automation integrations to improve ticket response times.</li>
+    <li>Supported FedRAMP compliance program "cradle-to-grave," assisting with evidence collection and documenting secure IT processes.</li>
+    <li>Administered identity and access management systems including Okta, LastPass, and Microsoft MFA for a secure, distributed workforce.</li>
+    <li>Authored 200+ technical runbooks and built a Confluence knowledge base, enabling self-service solutions for 4,000+ users.</li>
+</ul>
+
+<h3>Education</h3>
+<p>
+    <b>Master of Business Administration</b> | University of Phoenix (2024)<br>
+    <b>Bachelor of Science in Information Technology</b> | University of Phoenix (2023)
+</p>
+
+<h3>Certifications</h3>
+<p>
+    • Foundations of Leadership Certificate 1 &amp; 2 – National Society of Leadership and Success (2023)
+</p>
+
+</body>
+</html>

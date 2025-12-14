@@ -1,0 +1,9 @@
+
+
+One of my proudest examples of owning the role, learning quickly, and delivering brilliant outcomes happened during my time at Teladoc Health. I joined the team in a near-level-two Service Desk role, surrounded by incredibly sharp developers and engineers. It was the first time I felt immersed in top-tier talent, and I knew I had to get creative to stand out.
+
+I noticed we lacked an internal knowledge base—something I’d relied on heavily in a previous role. I started looking for ways to fill that gap and discovered that Atlassian Confluence was already part of our tech stack. No one on my team was using it, and it looked like a previous attempt to launch it had fizzled out. Even though I’d never used Confluence before—or even heard of it—I decided to make the most of what we had. I began experimenting with it to document my own troubleshooting steps, and spent nights taking LinkedIn courses to level up my skills.
+
+Within six months, I had built 30 runbooks and pitched them to my manager. That pitch led to a promotion to Technical Lead Writer II, where I was given a direct report and tasked with scaling the project. Together, we authored over 200 runbooks that became the source of truth for the entire IT department. Since the Service Desk was the first line of contact, our documentation kicked off workflows across the org.
+
+It was a scrappy, self-driven effort that turned into a foundational asset—and it all started with curiosity, ownership, and a drive to deliver value using the tools already at hand.
