@@ -1,34 +1,93 @@
-import Link from "next/link";
-
-export default function HomePage() {
+export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-6 py-16">
-      <div className="max-w-2xl text-center space-y-6">
-        <p className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">
-          Resume Builder Pro
+    <main style={styles.main}>
+      <section style={styles.section}>
+        <h1 style={styles.h1}>AI, explained like a human.</h1>
+
+        <p style={styles.lead}>
+          I help everyday people and small businesses use AI without the overwhelm.
         </p>
-        <h1 className="text-4xl font-semibold text-slate-900">
-          Craft polished, ATS-ready resumes without leaving your browser.
-        </h1>
-        <p className="text-lg text-slate-600">
-          Import an existing resume, tailor it to new roles, generate AI cover letters, and export to PDF or Word.
-          Your work stays cached locally so you never lose progress.
-        </p>
-        <div className="flex items-center justify-center gap-3">
-          <Link
-            href="/resume"
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
-          >
-            Open the Builder
-          </Link>
-          <Link
-            href="/resume"
-            className="inline-flex items-center justify-center rounded-lg px-6 py-3 text-blue-700 font-medium border border-blue-200 hover:border-blue-400"
-          >
-            View Demo
-          </Link>
+
+        <div style={styles.block}>
+          <h2 style={styles.h2}>What I Do</h2>
+          <ul style={styles.list}>
+            <li>Make AI tools practical, not intimidating</li>
+            <li>Help automate simple tasks and save time</li>
+            <li>Translate tech speak into clear, usable steps</li>
+          </ul>
         </div>
-      </div>
+
+        <div style={styles.block}>
+          <h2 style={styles.h2}>Who It’s For</h2>
+          <ul style={styles.list}>
+            <li>Professionals who feel behind on AI</li>
+            <li>Small business owners who want leverage, not complexity</li>
+            <li>Anyone tired of feeling dumb around technology</li>
+          </ul>
+        </div>
+
+        <div style={styles.cta}>
+          <p style={styles.ctaText}>Want to talk?</p>
+          <a href="mailto:dan.garza@aifrienddan.com" style={styles.email}>
+            dan.garza@aifrienddan.com
+          </a>
+        </div>
+      </section>
     </main>
   );
 }
+
+const styles = {
+  main: {
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    color: "#111111",
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    padding: "2rem",
+  },
+  section: {
+    maxWidth: "720px",
+    width: "100%",
+  },
+  h1: {
+    fontSize: "2.75rem",
+    fontWeight: 700,
+    marginBottom: "1rem",
+    lineHeight: 1.2,
+  },
+  lead: {
+    fontSize: "1.25rem",
+    marginBottom: "2.5rem",
+    color: "#444",
+  },
+  block: {
+    marginBottom: "2rem",
+  },
+  h2: {
+    fontSize: "1.4rem",
+    fontWeight: 600,
+    marginBottom: "0.75rem",
+  },
+  list: {
+    paddingLeft: "1.25rem",
+    lineHeight: 1.7,
+  },
+  cta: {
+    marginTop: "3rem",
+    paddingTop: "1.5rem",
+    borderTop: "1px solid #eee",
+  },
+  ctaText: {
+    fontSize: "1.1rem",
+    marginBottom: "0.5rem",
+  },
+  email: {
+    fontSize: "1.1rem",
+    fontWeight: 600,
+    color: "#000",
+    textDecoration: "none",
+  },
+};
