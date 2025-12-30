@@ -1044,8 +1044,8 @@ const ResumeBuilder = () => {
                       <label className="text-sm font-medium text-gray-600">Bullets</label>
                       {exp.bullets.map((bullet, idx) => (
                         <div key={idx} className="flex gap-2">
-                          <textarea value={bullet} onChange={(e) => updateBullet(exp.id, idx, e.target.value)} className="flex-1 p-2 border rounded text-sm" rows="2" />
-                          <button 
+                          <textarea value={bullet} onChange={(e) => updateBullet(exp.id, idx, e.target.value)} className="flex-1 p-2 border rounded text-sm" rows={2} />
+                          <button
                             onClick={() => enhanceBullet(exp.id, idx)} 
                             disabled={enhancingBullet === `${exp.id}-${idx}`}
                             className="text-purple-600 hover:text-purple-800 disabled:opacity-50"
