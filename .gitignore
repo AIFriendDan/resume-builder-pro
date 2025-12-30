@@ -69,3 +69,5 @@ coverage/
 /Ignore_subfolders_Dans_IMPORTANT
 .streamlit/secrets.toml
 .vercel
+
+/app/generated/prisma
