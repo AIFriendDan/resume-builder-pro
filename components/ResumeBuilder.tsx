@@ -121,6 +121,10 @@ const ResumeBuilder = () => {
   const [isTailoring, setIsTailoring] = useState(false);
   const [tailoredData, setTailoredData] = useState(null);
   
+  // AI Feature States
+  const [enhancingBullet, setEnhancingBullet] = useState(null);
+  const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
+  
   // New UX States
   const [activeTab, setActiveTab] = useState('header');
   const [showIntro, setShowIntro] = useState(false);
@@ -285,6 +289,84 @@ const ResumeBuilder = () => {
     newData.education = newData.education.filter(e => e.id !== id);
     setResumeData(newData);
     saveData(newData);
+  };
+
+  // AI Actions
+  const enhanceBullet = async (expId, bulletIdx) => {
+    const exp = resumeData.experience.find(e => e.id === expId);
+    if (!exp) return;
+
+    const bulletText = exp.bullets[bulletIdx];
+    if (!bulletText) return;
+
+    setEnhancingBullet(`${expId}-${bulletIdx}`);
+    
+    try {
+      const response = await fetch('/api/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: bulletText,
+          role: exp.title,
+          company: exp.company
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.error);
+      
+      if (data.output) {
+        updateBullet(expId, bulletIdx, data.output);
+      }
+    } catch (error) {
+      console.error('Enhance error:', error);
+      alert('Failed to enhance bullet point');
+    } finally {
+      setEnhancingBullet(null);
+    }
+  };
+
+  const generateCoverLetter = async () => {
+    if (!coverLetterData.jobTitle || !coverLetterData.company) {
+      alert('Please enter Job Title and Company Name');
+      return;
+    }
+
+    setIsGeneratingCoverLetter(true);
+    
+    try {
+      // Prepare context for AI
+      const resumeSummary = resumeData.summary;
+      const experience = resumeData.experience.slice(0, 3).map(e => 
+        `${e.title} at ${e.company}: ${e.bullets.slice(0, 2).join('. ')}`
+      ).join('\n');
+      const skills = resumeData.skills.slice(0, 10).join(', ');
+
+      const response = await fetch('/api/cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobTitle: coverLetterData.jobTitle,
+          company: coverLetterData.company,
+          hiringManager: coverLetterData.hiringManager,
+          resumeSummary,
+          experience,
+          skills
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.error);
+      
+      setCoverLetterData(prev => ({ ...prev, content: data.content }));
+    } catch (error) {
+      console.error('Cover Letter error:', error);
+      alert('Failed to generate cover letter');
+    } finally {
+      setIsGeneratingCoverLetter(false);
+    }
   };
 
   // Certifications CRUD
@@ -502,7 +584,11 @@ const ResumeBuilder = () => {
       setTailoredData(data);
       setTimeout(() => {
         const editorPane = document.getElementById('editor-scroll-pane');
-        if (editorPane) editorPane.scrollTo({ top: 0, behavior: 'smooth' });
+        if (editorPane) {
+          editorPane.scrollTop = 0;
+          editorPane.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
     } catch (error) {
       console.error('Tailor error:', error);
@@ -786,6 +872,7 @@ const ResumeBuilder = () => {
     { id: 'education', label: 'Education', icon: BookOpen },
     { id: 'certifications', label: 'Certs', icon: Sparkles },
     { id: 'custom', label: 'Custom', icon: Plus },
+    { id: 'cover-letter', label: 'Cover Letter', icon: FileText },
     { id: 'tailor', label: 'AI Tailor', icon: Sparkles, highlight: true },
   ];
 
@@ -848,7 +935,7 @@ const ResumeBuilder = () => {
         {/* Left Pane - Editor */}
         <div className="w-1/2 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
           {/* Tabs */}
-          <div className="flex overflow-x-auto border-b border-gray-200 p-2 gap-1 bg-gray-50 no-scrollbar">
+          <div className="flex flex-wrap border-b border-gray-200 p-2 gap-1 bg-gray-50">
             {tabs.map(tab => (
               <button
                 key={tab.id}
@@ -958,6 +1045,14 @@ const ResumeBuilder = () => {
                       {exp.bullets.map((bullet, idx) => (
                         <div key={idx} className="flex gap-2">
                           <textarea value={bullet} onChange={(e) => updateBullet(exp.id, idx, e.target.value)} className="flex-1 p-2 border rounded text-sm" rows="2" />
+                          <button 
+                            onClick={() => enhanceBullet(exp.id, idx)} 
+                            disabled={enhancingBullet === `${exp.id}-${idx}`}
+                            className="text-purple-600 hover:text-purple-800 disabled:opacity-50"
+                            title="Enhance with AI"
+                          >
+                            {enhancingBullet === `${exp.id}-${idx}` ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
+                          </button>
                           <button onClick={() => deleteBullet(exp.id, idx)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                         </div>
                       ))}
@@ -1056,6 +1151,80 @@ const ResumeBuilder = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {activeTab === 'cover-letter' && (
+              <div className="space-y-6 max-w-2xl mx-auto h-full flex flex-col">
+                 <div className="flex items-center gap-2 mb-2">
+                   <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
+                     <FileText size={24} />
+                   </div>
+                   <div>
+                     <h2 className="text-xl font-bold text-gray-800">Cover Letter Generator</h2>
+                     <p className="text-sm text-gray-600">Create a tailored cover letter in seconds.</p>
+                   </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="col-span-2 md:col-span-1">
+                     <label className="block text-sm font-medium text-gray-700 mb-1">Target Company</label>
+                     <input 
+                       type="text" 
+                       value={coverLetterData.company} 
+                       onChange={(e) => setCoverLetterData({...coverLetterData, company: e.target.value})} 
+                       className="w-full p-2 border rounded"
+                       placeholder="e.g. Acme Corp"
+                     />
+                   </div>
+                   <div className="col-span-2 md:col-span-1">
+                     <label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
+                     <input 
+                       type="text" 
+                       value={coverLetterData.jobTitle} 
+                       onChange={(e) => setCoverLetterData({...coverLetterData, jobTitle: e.target.value})} 
+                       className="w-full p-2 border rounded"
+                       placeholder="e.g. Senior Developer"
+                     />
+                   </div>
+                   <div className="col-span-2">
+                     <label className="block text-sm font-medium text-gray-700 mb-1">Hiring Manager (Optional)</label>
+                     <input 
+                       type="text" 
+                       value={coverLetterData.hiringManager} 
+                       onChange={(e) => setCoverLetterData({...coverLetterData, hiringManager: e.target.value})} 
+                       className="w-full p-2 border rounded"
+                       placeholder="e.g. Jane Doe"
+                     />
+                   </div>
+                 </div>
+
+                 <button
+                   onClick={generateCoverLetter}
+                   disabled={isGeneratingCoverLetter}
+                   className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex justify-center items-center gap-2 font-semibold shadow-sm"
+                 >
+                   {isGeneratingCoverLetter ? <><Loader2 className="animate-spin" /> Generating...</> : <><Sparkles size={18} /> Generate Cover Letter</>}
+                 </button>
+
+                 {coverLetterData.content && (
+                   <div className="flex-1 flex flex-col">
+                     <div className="flex justify-between items-center mb-2">
+                       <h3 className="font-bold text-gray-700">Generated Letter</h3>
+                       <button 
+                         onClick={() => {navigator.clipboard.writeText(coverLetterData.content); alert('Copied!');}}
+                         className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                       >
+                         Copy to Clipboard
+                       </button>
+                     </div>
+                     <textarea
+                       value={coverLetterData.content}
+                       onChange={(e) => setCoverLetterData({...coverLetterData, content: e.target.value})}
+                       className="flex-1 w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-serif leading-relaxed"
+                     />
+                   </div>
+                 )}
               </div>
             )}
 

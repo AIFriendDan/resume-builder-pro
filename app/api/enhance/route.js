@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: 'https://api.groq.com/openai/v1'
 });
 
 export async function POST(req) {
@@ -30,7 +31,7 @@ export async function POST(req) {
     `;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "llama-3.1-8b-instant",
       messages: [
         { role: "system", content: "You are an expert resume writer." },
         { role: "user", content: prompt }
