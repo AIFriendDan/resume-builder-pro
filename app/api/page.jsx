@@ -25,8 +25,8 @@ export default function ResumePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          resume: { text: resumeText },
-          jobDescription: jobDescription,
+          resume_text: resumeText,
+          job_description_text: jobDescription,
         }),
       });
 
@@ -36,7 +36,7 @@ export default function ResumePage() {
         throw new Error(data.error || "Failed to tailor resume.");
       }
 
-      setOptimizedResume(JSON.stringify(data, null, 2));
+      setOptimizedResume(data.optimized_resume || "");
     } catch (err) {
       console.error("Tailor request failed:", err);
       setError(err.message || "Failed to tailor resume.");
@@ -84,7 +84,7 @@ export default function ResumePage() {
 
             {optimizedResume && (
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-700">Analysis Results</p>
+                <p className="text-sm font-semibold text-slate-700">Optimized Resume</p>
                 <textarea
                   value={optimizedResume}
                   readOnly
