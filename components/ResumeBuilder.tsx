@@ -1143,7 +1143,7 @@ const ResumeBuilder = () => {
                     <div className="space-y-2">
                       {section.items.map((item, idx) => (
                         <div key={idx} className="flex gap-2">
-                          <textarea value={item} onChange={(e) => updateCustomItem(section.id, idx, e.target.value)} className="flex-1 p-2 border rounded text-sm" rows="2" />
+                          <textarea value={item} onChange={(e) => updateCustomItem(section.id, idx, e.target.value)} className="flex-1 p-2 border rounded text-sm" rows={2} />
                           <button onClick={() => deleteCustomItem(section.id, idx)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                         </div>
                       ))}

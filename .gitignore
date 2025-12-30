@@ -68,3 +68,4 @@ coverage/
 /IgnoreThis
 /Ignore_subfolders_Dans_IMPORTANT
 .streamlit/secrets.toml
+.vercel
