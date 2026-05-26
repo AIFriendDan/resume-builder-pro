@@ -118,3 +118,58 @@ export const TrendingUp = (props) => (
     <polyline points="17 6 23 6 23 12" />
   </Icon>
 );
+
+export const User = (props) => (
+  <Icon {...props}>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </Icon>
+);
+
+export const Briefcase = (props) => (
+  <Icon {...props}>
+    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+  </Icon>
+);
+
+export const Zap = (props) => (
+  <Icon {...props}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </Icon>
+);
+
+export const GraduationCap = (props) => (
+  <Icon {...props}>
+    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+  </Icon>
+);
+
+export const Award = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="8" r="6" />
+    <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+  </Icon>
+);
+
+export const AlignLeft = (props) => (
+  <Icon {...props}>
+    <line x1="21" y1="6" x2="3" y2="6" />
+    <line x1="15" y1="12" x2="3" y2="12" />
+    <line x1="17" y1="18" x2="3" y2="18" />
+  </Icon>
+);
+
+export const Mail = (props) => (
+  <Icon {...props}>
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+    <polyline points="22,6 12,13 2,6" />
+  </Icon>
+);
+
+export const Check = (props) => (
+  <Icon {...props}>
+    <polyline points="20 6 9 17 4 12" />
+  </Icon>
+);
