@@ -4,8 +4,68 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Download, Plus, Trash2, FileText, Loader2, CheckCircle, Sparkles,
   BookOpen, ArrowUp, TrendingUp, ChevronRight,
-  User, Briefcase, Zap, GraduationCap, Award, AlignLeft, Mail, Check
+  User, Briefcase, Zap, GraduationCap, Award, AlignLeft, Mail, Check,
+  GripVertical, Lock
 } from './icons';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy,
+  useSortable, arrayMove
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { DEFAULT_SECTION_ORDER, SECTION_META, normalizeSectionOrder } from '../lib/sections';
+
+// ── Additional Links helpers ─────────────────────────────────
+const LINK_SUGGESTIONS = ['GitHub', 'Portfolio', 'Website', 'Publications'];
+const stripProtocol = (url) => (url || '').replace(/^https?:\/\//i, '');
+const toHref = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
+const getValidLinks = (links) => (links || []).filter(l => l.label?.trim() && l.url?.trim());
+
+// ── Sortable section row (module scope — stable identity for dnd-kit) ──
+const SortableSectionRow = ({ id, label, subtitle, step, active, done, onClick }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : 'auto',
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="relative flex items-center">
+      <button
+        {...attributes}
+        {...listeners}
+        title="Drag to reorder"
+        className="px-1.5 py-2.5 text-pro-muted hover:text-pro-sub cursor-grab active:cursor-grabbing touch-none shrink-0"
+      >
+        <GripVertical size={14} />
+      </button>
+      <button
+        onClick={onClick}
+        className={`relative flex items-center gap-3 flex-1 min-w-0 pr-3 py-2.5 text-left transition-all border-l-2
+          ${active
+            ? 'bg-pro-elevated border-pro-gold'
+            : 'border-transparent hover:bg-pro-elevated/40 hover:border-pro-border'}`}
+      >
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-all
+          ${active ? 'bg-pro-gold text-pro-base' :
+            done  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' :
+                    'bg-pro-card border border-pro-border text-pro-muted'}`}
+        >
+          {done && !active ? <Check size={12} /> : step}
+        </div>
+        <div className="min-w-0">
+          <div className={`text-sm font-semibold truncate ${active ? 'text-pro-gold' : 'text-pro-text'}`}>{label}</div>
+          <div className="text-[11px] text-pro-muted truncate">{subtitle}</div>
+        </div>
+        {active && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-pro-gold rounded-l-full" />}
+      </button>
+    </div>
+  );
+};
 
 const ResumeBuilder = () => {
   const defaultData = {
@@ -17,6 +77,8 @@ const ResumeBuilder = () => {
       email: "danraygarza490@gmail.com",
       linkedin: "linkedin.com/in/dan-garza-mba490"
     },
+    additionalLinks: [],
+    sectionOrder: DEFAULT_SECTION_ORDER,
     summary: "Versatile IT operations professional with 10+ years of experience in Microsoft 365 administration, technical documentation, and process automation. Skilled in Exchange Admin, OneDrive Admin, Teams, and SharePoint governance. Experienced in Jira administration (dashboards, Kanban boards, workflow schemes), Confluence knowledge base management, and automation with PowerShell and Power Automate. Adept at Slack and LastPass administration, Okta identity management, and Microsoft MFA security enforcement. Proven ability to translate complex systems into clear documentation and training resources that drive adoption and efficiency. Specialized in platform stewardship, documentation ownership, and process improvement.",
     customSections: [],
     skills: [
@@ -144,6 +206,8 @@ const ResumeBuilder = () => {
       if (local) {
         const parsed = JSON.parse(local);
         if (!parsed.customSections) parsed.customSections = [];
+        if (!parsed.additionalLinks) parsed.additionalLinks = [];
+        parsed.sectionOrder = normalizeSectionOrder(parsed.sectionOrder);
         setResumeData(parsed);
       }
       if (!localStorage.getItem('has-seen-intro')) setShowIntro(true);
@@ -201,6 +265,28 @@ const ResumeBuilder = () => {
   const addCustomItem = (sid) => { const d = { ...resumeData }; const s = d.customSections.find(x => x.id === sid); if (s) s.items.push("New item"); setResumeData(d); saveData(d); };
   const updateCustomItem = (sid, idx, v) => { const d = { ...resumeData }; const s = d.customSections.find(x => x.id === sid); if (s) s.items[idx] = v; setResumeData(d); saveData(d); };
   const deleteCustomItem = (sid, idx) => { const d = { ...resumeData }; const s = d.customSections.find(x => x.id === sid); if (s) s.items.splice(idx, 1); setResumeData(d); saveData(d); };
+
+  // ── Additional Links ───────────────────────────────────────
+  const addLink = () => { const d = { ...resumeData }; d.additionalLinks = [...(d.additionalLinks || []), { id: Date.now(), label: "", url: "" }]; setResumeData(d); saveData(d); };
+  const updateLink = (id, field, value) => { const d = { ...resumeData }; d.additionalLinks = d.additionalLinks.map(l => l.id === id ? { ...l, [field]: value } : l); setResumeData(d); saveData(d); };
+  const deleteLink = (id) => { const d = { ...resumeData }; d.additionalLinks = d.additionalLinks.filter(l => l.id !== id); setResumeData(d); saveData(d); };
+
+  // ── Section reordering ─────────────────────────────────────
+  const sectionSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+  const handleSectionDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const sortableIds = resumeData.sectionOrder.filter(id => id !== 'identity');
+    const oldIndex = sortableIds.indexOf(active.id);
+    const newIndex = sortableIds.indexOf(over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(sortableIds, oldIndex, newIndex);
+    const d = { ...resumeData, sectionOrder: normalizeSectionOrder(['identity', ...reordered]) };
+    setResumeData(d); saveData(d);
+  };
 
   // ── AI actions ────────────────────────────────────────────
   const enhanceBullet = async (expId, bulletIdx) => {
@@ -327,57 +413,100 @@ const ResumeBuilder = () => {
     }
   };
 
-  // ── Resume templates (print output — layout unchanged) ────
-  const ModernTemplate = () => (
-    <div id="resume-preview" className="bg-white p-8 shadow-lg text-left" style={{ width: '8.5in', minHeight: '11in' }}>
-      <div className="text-center border-b-2 border-blue-900 pb-4 mb-4">
-        <h1 className="text-3xl font-bold text-blue-900 mb-1">{resumeData.header.name}</h1>
-        <h2 className="text-lg text-gray-700 mb-2">{resumeData.header.title}</h2>
-        <p className="text-sm text-gray-600">{resumeData.header.location} | {resumeData.header.phone} | {resumeData.header.email}<br />{resumeData.header.linkedin}</p>
+  // ── Resume templates (print output) ────────────────────────
+  // Render contract: sectionOrder is the single source of truth. Each template
+  // maps sectionId -> block once, then iterates sectionOrder. PDF/Word exports
+  // capture this same rendered DOM, so they automatically follow the order too.
+  const validLinks = getValidLinks(resumeData.additionalLinks);
+  const sortableSectionIds = resumeData.sectionOrder.filter(id => id !== 'identity');
+
+  const ModernTemplate = () => {
+    const blocks = {
+      summary: <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Professional Summary</h3><p className="text-sm text-justify leading-relaxed">{resumeData.summary}</p></div>,
+      skills: <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Core Competencies</h3><div className="grid grid-cols-2 gap-x-4 gap-y-1">{resumeData.skills.map((s, i) => <div key={i} className="text-sm">- {s}</div>)}</div></div>,
+      experience: <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Professional Experience</h3>{resumeData.experience.map(exp => (<div key={exp.id} className="mb-3"><div className="flex justify-between items-baseline mb-1"><span className="font-bold text-sm">{exp.company}</span><span className="text-xs italic text-gray-600">{exp.startDate} - {exp.endDate}</span></div><div className="italic text-sm text-gray-700 mb-1">{exp.title}</div><ul className="ml-4">{exp.bullets.map((b, i) => <li key={i} className="text-sm mb-1">- {b}</li>)}</ul></div>))}</div>,
+      education: <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Education</h3>{resumeData.education.map(edu => <div key={edu.id} className="text-sm mb-1"><span className="font-bold">{edu.degree}</span> - <span className="italic">{edu.institution}</span> - {edu.startDate} - {edu.endDate}</div>)}</div>,
+      certifications: <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Certifications</h3>{resumeData.certifications.map((c, i) => <div key={i} className="text-sm mb-1">- {c}</div>)}</div>,
+      custom: resumeData.customSections?.map(sec => (<div key={sec.id} className="mt-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">{sec.title}</h3>{sec.items.map((item, i) => <div key={i} className="text-sm mb-1">- {item}</div>)}</div>)),
+    };
+    return (
+      <div id="resume-preview" className="bg-white p-8 shadow-lg text-left" style={{ width: '8.5in', minHeight: '11in' }}>
+        <div className="text-center border-b-2 border-blue-900 pb-4 mb-4">
+          <h1 className="text-3xl font-bold text-blue-900 mb-1">{resumeData.header.name}</h1>
+          <h2 className="text-lg text-gray-700 mb-2">{resumeData.header.title}</h2>
+          <p className="text-sm text-gray-600">{resumeData.header.location} | {resumeData.header.phone} | {resumeData.header.email}<br />
+            {resumeData.header.linkedin}
+            {validLinks.map(l => <React.Fragment key={l.id}> | <a href={toHref(l.url)} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{stripProtocol(l.url)}</a></React.Fragment>)}
+          </p>
+        </div>
+        {sortableSectionIds.map(id => <React.Fragment key={id}>{blocks[id]}</React.Fragment>)}
       </div>
-      <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Professional Summary</h3><p className="text-sm text-justify leading-relaxed">{resumeData.summary}</p></div>
-      <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Core Competencies</h3><div className="grid grid-cols-2 gap-x-4 gap-y-1">{resumeData.skills.map((s, i) => <div key={i} className="text-sm">- {s}</div>)}</div></div>
-      <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Professional Experience</h3>{resumeData.experience.map(exp => (<div key={exp.id} className="mb-3"><div className="flex justify-between items-baseline mb-1"><span className="font-bold text-sm">{exp.company}</span><span className="text-xs italic text-gray-600">{exp.startDate} - {exp.endDate}</span></div><div className="italic text-sm text-gray-700 mb-1">{exp.title}</div><ul className="ml-4">{exp.bullets.map((b, i) => <li key={i} className="text-sm mb-1">- {b}</li>)}</ul></div>))}</div>
-      <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Education</h3>{resumeData.education.map(edu => <div key={edu.id} className="text-sm mb-1"><span className="font-bold">{edu.degree}</span> - <span className="italic">{edu.institution}</span> - {edu.startDate} - {edu.endDate}</div>)}</div>
-      <div className="mb-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">Certifications</h3>{resumeData.certifications.map((c, i) => <div key={i} className="text-sm mb-1">- {c}</div>)}</div>
-      {resumeData.customSections?.map(sec => (<div key={sec.id} className="mt-4"><h3 className="text-sm font-bold text-blue-900 uppercase border-b border-gray-300 pb-1 mb-2">{sec.title}</h3>{sec.items.map((item, i) => <div key={i} className="text-sm mb-1">- {item}</div>)}</div>))}
-    </div>
-  );
+    );
+  };
 
-  const ClassicTemplate = () => (
-    <div id="resume-preview" className="bg-white p-8 shadow-lg text-left" style={{ width: '8.5in', minHeight: '11in' }}>
-      <div className="text-center mb-4"><h1 className="text-3xl font-bold mb-1">{resumeData.header.name}</h1><p className="text-sm">{resumeData.header.location} | {resumeData.header.phone} | {resumeData.header.email} | {resumeData.header.linkedin}</p></div>
-      <hr className="border-t-2 border-black mb-4" />
-      <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Professional Summary</h3><p className="text-sm text-justify leading-relaxed">{resumeData.summary}</p></div>
-      <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Core Competencies</h3><div className="grid grid-cols-2 gap-x-4 gap-y-1">{resumeData.skills.map((s, i) => <div key={i} className="text-sm">- {s}</div>)}</div></div>
-      <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Professional Experience</h3>{resumeData.experience.map(exp => (<div key={exp.id} className="mb-3"><div className="flex justify-between items-baseline"><span className="font-bold text-sm">{exp.company}</span><span className="text-xs italic">{exp.startDate} - {exp.endDate}</span></div><div className="italic text-sm mb-1">{exp.title}</div><ul className="ml-4">{exp.bullets.map((b, i) => <li key={i} className="text-sm mb-1">- {b}</li>)}</ul></div>))}</div>
-      <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Education</h3>{resumeData.education.map(edu => <div key={edu.id} className="text-sm mb-1"><span className="font-bold">{edu.degree}</span> - <span className="italic">{edu.institution}</span> - {edu.startDate} - {edu.endDate}</div>)}</div>
-      <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Certifications</h3>{resumeData.certifications.map((c, i) => <div key={i} className="text-sm mb-1">- {c}</div>)}</div>
-    </div>
-  );
+  const ClassicTemplate = () => {
+    const blocks = {
+      summary: <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Professional Summary</h3><p className="text-sm text-justify leading-relaxed">{resumeData.summary}</p></div>,
+      skills: <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Core Competencies</h3><div className="grid grid-cols-2 gap-x-4 gap-y-1">{resumeData.skills.map((s, i) => <div key={i} className="text-sm">- {s}</div>)}</div></div>,
+      experience: <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Professional Experience</h3>{resumeData.experience.map(exp => (<div key={exp.id} className="mb-3"><div className="flex justify-between items-baseline"><span className="font-bold text-sm">{exp.company}</span><span className="text-xs italic">{exp.startDate} - {exp.endDate}</span></div><div className="italic text-sm mb-1">{exp.title}</div><ul className="ml-4">{exp.bullets.map((b, i) => <li key={i} className="text-sm mb-1">- {b}</li>)}</ul></div>))}</div>,
+      education: <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Education</h3>{resumeData.education.map(edu => <div key={edu.id} className="text-sm mb-1"><span className="font-bold">{edu.degree}</span> - <span className="italic">{edu.institution}</span> - {edu.startDate} - {edu.endDate}</div>)}</div>,
+      certifications: <div className="mb-4"><h3 className="text-sm font-bold uppercase mb-2">Certifications</h3>{resumeData.certifications.map((c, i) => <div key={i} className="text-sm mb-1">- {c}</div>)}</div>,
+      custom: resumeData.customSections?.map(sec => (<div key={sec.id} className="mt-4"><h3 className="text-sm font-bold uppercase mb-2">{sec.title}</h3>{sec.items.map((item, i) => <div key={i} className="text-sm mb-1">- {item}</div>)}</div>)),
+    };
+    return (
+      <div id="resume-preview" className="bg-white p-8 shadow-lg text-left" style={{ width: '8.5in', minHeight: '11in' }}>
+        <div className="text-center mb-4">
+          <h1 className="text-3xl font-bold mb-1">{resumeData.header.name}</h1>
+          <p className="text-sm">
+            {resumeData.header.location} | {resumeData.header.phone} | {resumeData.header.email} | {resumeData.header.linkedin}
+            {validLinks.map(l => <React.Fragment key={l.id}> | <a href={toHref(l.url)} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{stripProtocol(l.url)}</a></React.Fragment>)}
+          </p>
+        </div>
+        <hr className="border-t-2 border-black mb-4" />
+        {sortableSectionIds.map(id => <React.Fragment key={id}>{blocks[id]}</React.Fragment>)}
+      </div>
+    );
+  };
 
-  const ATSTemplate = () => (
-    <div id="resume-preview" className="bg-white p-8 shadow-lg text-left" style={{ width: '8.5in', minHeight: '11in' }}>
-      <div className="mb-4"><h1 className="text-2xl font-bold mb-1">{resumeData.header.name}</h1><h2 className="text-base font-semibold text-gray-700 mb-2">{resumeData.header.title}</h2><div className="text-xs leading-relaxed"><div>{resumeData.header.location}</div><div>Phone: {resumeData.header.phone}</div><div>Email: {resumeData.header.email}</div><div>LinkedIn: {resumeData.header.linkedin}</div></div></div>
-      <hr className="border-t border-gray-400 mb-3" />
-      <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Profile</h3><p className="text-xs leading-relaxed">{resumeData.summary}</p></div>
-      <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Skills</h3><ul className="ml-4">{resumeData.skills.map((s, i) => <li key={i} className="text-xs mb-1">- {s}</li>)}</ul></div>
-      <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Professional Experience</h3>{resumeData.experience.map(exp => (<div key={exp.id} className="mb-3"><div className="flex justify-between items-baseline"><span className="font-bold text-xs">{exp.company}</span><span className="text-xs italic">{exp.startDate} - {exp.endDate}</span></div><div className="italic text-xs mb-1">{exp.title}</div><ul className="ml-4">{exp.bullets.map((b, i) => <li key={i} className="text-xs mb-1">- {b}</li>)}</ul></div>))}</div>
-      <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Education</h3>{resumeData.education.map(edu => <div key={edu.id} className="text-xs mb-1"><span className="font-bold">{edu.degree}</span> - <span className="italic">{edu.institution}</span> - {edu.startDate} - {edu.endDate}</div>)}</div>
-      <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Certifications</h3>{resumeData.certifications.map((c, i) => <div key={i} className="text-xs mb-1">- {c}</div>)}</div>
-    </div>
-  );
+  const ATSTemplate = () => {
+    const blocks = {
+      summary: <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Profile</h3><p className="text-xs leading-relaxed">{resumeData.summary}</p></div>,
+      skills: <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Skills</h3><ul className="ml-4">{resumeData.skills.map((s, i) => <li key={i} className="text-xs mb-1">- {s}</li>)}</ul></div>,
+      experience: <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Professional Experience</h3>{resumeData.experience.map(exp => (<div key={exp.id} className="mb-3"><div className="flex justify-between items-baseline"><span className="font-bold text-xs">{exp.company}</span><span className="text-xs italic">{exp.startDate} - {exp.endDate}</span></div><div className="italic text-xs mb-1">{exp.title}</div><ul className="ml-4">{exp.bullets.map((b, i) => <li key={i} className="text-xs mb-1">- {b}</li>)}</ul></div>))}</div>,
+      education: <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Education</h3>{resumeData.education.map(edu => <div key={edu.id} className="text-xs mb-1"><span className="font-bold">{edu.degree}</span> - <span className="italic">{edu.institution}</span> - {edu.startDate} - {edu.endDate}</div>)}</div>,
+      certifications: <div className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">Certifications</h3>{resumeData.certifications.map((c, i) => <div key={i} className="text-xs mb-1">- {c}</div>)}</div>,
+      custom: resumeData.customSections?.map(sec => (<div key={sec.id} className="mb-3"><h3 className="text-sm font-bold uppercase mb-2 border-b border-gray-300 pb-1">{sec.title}</h3>{sec.items.map((item, i) => <div key={i} className="text-xs mb-1">- {item}</div>)}</div>)),
+    };
+    return (
+      <div id="resume-preview" className="bg-white p-8 shadow-lg text-left" style={{ width: '8.5in', minHeight: '11in' }}>
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold mb-1">{resumeData.header.name}</h1>
+          <h2 className="text-base font-semibold text-gray-700 mb-2">{resumeData.header.title}</h2>
+          <div className="text-xs leading-relaxed">
+            <div>{resumeData.header.location}</div>
+            <div>Phone: {resumeData.header.phone}</div>
+            <div>Email: {resumeData.header.email}</div>
+            <div>LinkedIn: {resumeData.header.linkedin}</div>
+            {validLinks.map(l => <div key={l.id}>{l.label}: <a href={toHref(l.url)} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{stripProtocol(l.url)}</a></div>)}
+          </div>
+        </div>
+        <hr className="border-t border-gray-400 mb-3" />
+        {sortableSectionIds.map(id => <React.Fragment key={id}>{blocks[id]}</React.Fragment>)}
+      </div>
+    );
+  };
 
-  // ── Step / tab config ─────────────────────────────────────
-  const resumeSteps = [
-    { id: 'header',         label: 'Identity',       subtitle: 'Name & contact',       icon: User,          step: 1 },
-    { id: 'summary',        label: 'Summary',         subtitle: 'Your professional pitch', icon: AlignLeft,  step: 2 },
-    { id: 'experience',     label: 'Experience',      subtitle: 'Work history',          icon: Briefcase,    step: 3 },
-    { id: 'skills',         label: 'Skills',          subtitle: 'Core competencies',     icon: Zap,          step: 4 },
-    { id: 'education',      label: 'Education',       subtitle: 'Degrees & programs',    icon: GraduationCap,step: 5 },
-    { id: 'certifications', label: 'Certifications',  subtitle: 'Credentials & awards',  icon: Award,        step: 6 },
-    { id: 'custom',         label: 'Custom',          subtitle: 'Additional sections',   icon: Plus,         step: 7 },
-  ];
+  // ── Step / tab config — derived from sectionOrder (single source of truth) ──
+  const SECTION_ICONS = { identity: User, summary: AlignLeft, experience: Briefcase, skills: Zap, education: GraduationCap, certifications: Award, custom: Plus };
+  const sectionIdToTabId = (sid) => sid === 'identity' ? 'header' : sid;
+  const resumeSteps = resumeData.sectionOrder.map((sid, i) => ({
+    id: sectionIdToTabId(sid),
+    sectionId: sid,
+    label: SECTION_META[sid].label,
+    subtitle: SECTION_META[sid].subtitle,
+    icon: SECTION_ICONS[sid],
+    step: i + 1,
+  }));
   const proTools = [
     { id: 'cover-letter', label: 'Cover Letter', subtitle: 'AI-generated letter', icon: Mail },
     { id: 'tailor',       label: 'AI Tailor',    subtitle: 'Beat the ATS system',  icon: Sparkles },
@@ -385,6 +514,10 @@ const ResumeBuilder = () => {
   const allTabs = [...resumeSteps, ...proTools];
   const currentTabIdx = allTabs.findIndex(t => t.id === activeTab);
   const nextTab = allTabs[currentTabIdx + 1];
+  const stepLabel = (tabId) => {
+    const step = resumeSteps.find(s => s.id === tabId);
+    return step ? `${step.step} of ${resumeSteps.length}` : undefined;
+  };
 
   // ── Style constants ───────────────────────────────────────
   const inp = "w-full px-3 py-2.5 bg-pro-base border border-pro-border rounded-lg text-pro-text placeholder:text-pro-muted focus:outline-none focus:ring-2 focus:ring-pro-gold/40 focus:border-pro-gold/60 transition-colors text-sm";
@@ -553,15 +686,18 @@ const ResumeBuilder = () => {
             <span className="text-[10px] font-black text-pro-muted uppercase tracking-[0.15em]">Resume Sections</span>
           </div>
 
-          {resumeSteps.map((tab, i) => {
+          {/* Identity — pinned at top, not draggable (ATS parsers expect contact info first) */}
+          {resumeSteps.filter(tab => tab.sectionId === 'identity').map(tab => {
             const active = activeTab === tab.id;
             const done = isStepComplete(tab.id);
-            const IconEl = tab.icon;
             return (
-              <React.Fragment key={tab.id}>
+              <div key={tab.id} className="relative flex items-center">
+                <div title="Locked — always first" className="px-1.5 py-2.5 text-pro-muted/40 shrink-0">
+                  <Lock size={14} />
+                </div>
                 <button
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-3 w-full px-3 py-2.5 text-left transition-all border-l-2
+                  className={`relative flex items-center gap-3 flex-1 min-w-0 pr-3 py-2.5 text-left transition-all border-l-2
                     ${active
                       ? 'bg-pro-elevated border-pro-gold'
                       : 'border-transparent hover:bg-pro-elevated/40 hover:border-pro-border'}`}
@@ -579,14 +715,30 @@ const ResumeBuilder = () => {
                   </div>
                   {active && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-pro-gold rounded-l-full" />}
                 </button>
-                {i < resumeSteps.length - 1 && (
-                  <div className="ml-6 flex justify-center">
-                    <div className={`w-px h-3 ${done ? 'bg-emerald-500/30' : 'bg-pro-border'}`} />
-                  </div>
-                )}
-              </React.Fragment>
+              </div>
             );
           })}
+
+          {/* Reorderable sections */}
+          <DndContext sensors={sectionSensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
+            <SortableContext
+              items={resumeSteps.filter(tab => tab.sectionId !== 'identity').map(tab => tab.sectionId)}
+              strategy={verticalListSortingStrategy}
+            >
+              {resumeSteps.filter(tab => tab.sectionId !== 'identity').map(tab => (
+                <SortableSectionRow
+                  key={tab.sectionId}
+                  id={tab.sectionId}
+                  label={tab.label}
+                  subtitle={tab.subtitle}
+                  step={tab.step}
+                  active={activeTab === tab.id}
+                  done={isStepComplete(tab.id)}
+                  onClick={() => setActiveTab(tab.id)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
 
           <div className="mx-4 my-3 border-t border-pro-border" />
 
@@ -644,7 +796,7 @@ const ResumeBuilder = () => {
             {/* ── Header tab ── */}
             {activeTab === 'header' && (
               <div>
-                <SectionHeader icon={User} title="Identity & Contact" subtitle="Your name and how recruiters reach you" step="1 of 7" />
+                <SectionHeader icon={User} title="Identity & Contact" subtitle="Your name and how recruiters reach you" step={stepLabel('header')} />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className={lbl}>Full Name</label>
@@ -671,6 +823,44 @@ const ResumeBuilder = () => {
                     <input type="text" value={resumeData.header.linkedin} onChange={e => updateField('header', 'linkedin', e.target.value)} className={inp} placeholder="linkedin.com/in/yourname" />
                   </div>
                 </div>
+
+                <div className="mt-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className={lbl}>Additional Links</label>
+                    <button onClick={addLink} className="flex items-center gap-1.5 text-pro-gold hover:text-pro-gold-dim font-semibold text-sm transition-colors">
+                      <Plus size={16} /> Add Link
+                    </button>
+                  </div>
+                  <datalist id="link-label-suggestions">
+                    {LINK_SUGGESTIONS.map(s => <option key={s} value={s} />)}
+                  </datalist>
+                  <div className="space-y-2">
+                    {(resumeData.additionalLinks || []).map(link => (
+                      <div key={link.id} className="flex gap-2">
+                        <input
+                          type="text"
+                          list="link-label-suggestions"
+                          value={link.label}
+                          onChange={e => updateLink(link.id, 'label', e.target.value)}
+                          className={`${inp} !w-40 shrink-0`}
+                          placeholder="Label"
+                        />
+                        <input
+                          type="text"
+                          value={link.url}
+                          onChange={e => updateLink(link.id, 'url', e.target.value)}
+                          className={inp}
+                          placeholder="github.com/yourname"
+                        />
+                        <button onClick={() => deleteLink(link.id)} className="text-pro-muted hover:text-red-400 transition-colors shrink-0"><Trash2 size={16} /></button>
+                      </div>
+                    ))}
+                  </div>
+                  {(resumeData.additionalLinks || []).length === 0 && (
+                    <p className="text-xs text-pro-muted mt-1">GitHub, portfolio, publications — anything else recruiters should see.</p>
+                  )}
+                </div>
+
                 <NextStep />
               </div>
             )}
@@ -678,7 +868,7 @@ const ResumeBuilder = () => {
             {/* ── Summary tab ── */}
             {activeTab === 'summary' && (
               <div>
-                <SectionHeader icon={AlignLeft} title="Professional Summary" subtitle="Your elevator pitch — 3–5 sentences, keyword-rich" step="2 of 7" />
+                <SectionHeader icon={AlignLeft} title="Professional Summary" subtitle="Your elevator pitch — 3–5 sentences, keyword-rich" step={stepLabel('summary')} />
                 <div className="bg-pro-elevated border border-pro-border rounded-lg px-4 py-3 mb-4 text-xs text-pro-sub">
                   <strong className="text-pro-gold">Pro tip:</strong> Lead with your years of experience, top 2–3 skills, and the value you bring. Avoid generic phrases like &quot;hard worker.&quot;
                 </div>
@@ -696,7 +886,7 @@ const ResumeBuilder = () => {
             {/* ── Experience tab ── */}
             {activeTab === 'experience' && (
               <div>
-                <SectionHeader icon={Briefcase} title="Work Experience" subtitle="List roles in reverse chronological order" step="3 of 7" />
+                <SectionHeader icon={Briefcase} title="Work Experience" subtitle="List roles in reverse chronological order" step={stepLabel('experience')} />
                 <div className="flex justify-end mb-4">
                   <button onClick={addExperience} className="flex items-center gap-1.5 text-pro-gold hover:text-pro-gold-dim font-semibold text-sm transition-colors">
                     <Plus size={16} /> Add Job
@@ -751,7 +941,7 @@ const ResumeBuilder = () => {
             {/* ── Skills tab ── */}
             {activeTab === 'skills' && (
               <div>
-                <SectionHeader icon={Zap} title="Skills & Competencies" subtitle="One skill per line — be specific, not generic" step="4 of 7" />
+                <SectionHeader icon={Zap} title="Skills & Competencies" subtitle="One skill per line — be specific, not generic" step={stepLabel('skills')} />
                 <div className="flex justify-end mb-4">
                   <button onClick={addSkill} className="flex items-center gap-1.5 text-pro-gold hover:text-pro-gold-dim font-semibold text-sm transition-colors">
                     <Plus size={16} /> Add Skill
@@ -772,7 +962,7 @@ const ResumeBuilder = () => {
             {/* ── Education tab ── */}
             {activeTab === 'education' && (
               <div>
-                <SectionHeader icon={GraduationCap} title="Education" subtitle="Most recent degree first" step="5 of 7" />
+                <SectionHeader icon={GraduationCap} title="Education" subtitle="Most recent degree first" step={stepLabel('education')} />
                 <div className="flex justify-end mb-4">
                   <button onClick={addEducation} className="flex items-center gap-1.5 text-pro-gold hover:text-pro-gold-dim font-semibold text-sm transition-colors">
                     <Plus size={16} /> Add Education
@@ -801,7 +991,7 @@ const ResumeBuilder = () => {
             {/* ── Certifications tab ── */}
             {activeTab === 'certifications' && (
               <div>
-                <SectionHeader icon={Award} title="Certifications" subtitle="Include issuer and date — helps with ATS" step="6 of 7" />
+                <SectionHeader icon={Award} title="Certifications" subtitle="Include issuer and date — helps with ATS" step={stepLabel('certifications')} />
                 <div className="flex justify-end mb-4">
                   <button onClick={addCertification} className="flex items-center gap-1.5 text-pro-gold hover:text-pro-gold-dim font-semibold text-sm transition-colors">
                     <Plus size={16} /> Add Cert
@@ -822,7 +1012,7 @@ const ResumeBuilder = () => {
             {/* ── Custom tab ── */}
             {activeTab === 'custom' && (
               <div>
-                <SectionHeader icon={Plus} title="Custom Sections" subtitle="Awards, publications, volunteer work, languages…" step="7 of 7" />
+                <SectionHeader icon={Plus} title="Custom Sections" subtitle="Awards, publications, volunteer work, languages…" step={stepLabel('custom')} />
                 <div className="flex justify-end mb-4">
                   <button onClick={addCustomSection} className="flex items-center gap-1.5 text-pro-gold hover:text-pro-gold-dim font-semibold text-sm transition-colors">
                     <Plus size={16} /> Add Section

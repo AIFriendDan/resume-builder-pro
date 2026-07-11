@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: 'https://api.groq.com/openai/v1'
-});
+import { anthropic, HAIKU_MODEL, firstText } from '../../../lib/anthropic';
 
 export async function POST(req) {
   try {
@@ -36,16 +31,14 @@ Write a compelling cover letter that:
 Return ONLY the cover letter text, no preamble or explanation.
 `;
 
-    const completion = await openai.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        { role: 'system', content: 'You are a professional cover letter writer.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.7
+    const message = await anthropic.messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 1024,
+      system: 'You are a professional cover letter writer.',
+      messages: [{ role: 'user', content: prompt }],
     });
 
-    const coverLetter = completion.choices[0]?.message?.content;
+    const coverLetter = firstText(message.content);
 
     return NextResponse.json({ content: coverLetter });
 

@@ -1,62 +1,70 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { anthropic, HAIKU_MODEL, firstText } from '../../../lib/anthropic';
 
-const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: 'https://api.groq.com/openai/v1'
-});
+const IMPORT_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    summary: { type: 'string' },
+    skills: { type: 'array', items: { type: 'string' } },
+    experience: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          company: { type: 'string' },
+          title: { type: 'string' },
+          startDate: { type: 'string' },
+          endDate: { type: 'string' },
+          bullets: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['company', 'title', 'startDate', 'endDate', 'bullets'],
+        additionalProperties: false,
+      },
+    },
+    education: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          degree: { type: 'string' },
+          institution: { type: 'string' },
+          startDate: { type: 'string' },
+          endDate: { type: 'string' },
+        },
+        required: ['degree', 'institution', 'startDate', 'endDate'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['title', 'summary', 'skills', 'experience', 'education'],
+  additionalProperties: false,
+};
 
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { text } = body; 
+    const { text } = body;
 
     if (!text) {
       return NextResponse.json({ error: 'Resume text is required.' }, { status: 400 });
     }
 
     const prompt = `Analyze this resume text and extract the structured data.
-    
+
     RESUME TEXT:
     ${text}
-    
-    Return ONLY a JSON object with this exact structure:
-    {
-      "title": "Professional Title",
-      "summary": "Professional Summary",
-      "skills": ["Skill 1", "Skill 2"],
-      "experience": [
-        {
-          "company": "Company Name",
-          "title": "Job Title",
-          "startDate": "Start Date",
-          "endDate": "End Date",
-          "bullets": ["Achievement 1", "Achievement 2"]
-        }
-      ],
-      "education": [
-        {
-           "degree": "Degree Name",
-           "institution": "Institution Name",
-           "startDate": "Start Date",
-           "endDate": "End Date"
-        }
-      ]
-    }
     `;
 
-    const completion = await openai.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        { role: 'system', content: 'You are a precise resume parser. Return only valid JSON.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.1,
-      response_format: { type: 'json_object' }
+    const message = await anthropic.messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 4096,
+      system: 'You are a precise resume parser.',
+      messages: [{ role: 'user', content: prompt }],
+      output_config: { format: { type: 'json_schema', schema: IMPORT_SCHEMA } },
     });
 
-    const content = completion.choices[0]?.message?.content;
-    const parsedData = JSON.parse(content || '{}');
+    const parsedData = JSON.parse(firstText(message.content));
 
     return NextResponse.json(parsedData);
 

@@ -173,3 +173,17 @@ export const Check = (props) => (
     <polyline points="20 6 9 17 4 12" />
   </Icon>
 );
+
+export const GripVertical = (props) => (
+  <Icon {...props}>
+    <circle cx="9" cy="5" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="9" cy="19" r="1" />
+    <circle cx="15" cy="5" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="19" r="1" />
+  </Icon>
+);
+
+export const Lock = (props) => (
+  <Icon {...props}>
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </Icon>
+);

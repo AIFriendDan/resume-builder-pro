@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: 'https://api.groq.com/openai/v1'
-});
+import { anthropic, HAIKU_MODEL, firstText } from "../../../lib/anthropic";
 
 export async function POST(req) {
   try {
@@ -30,16 +25,14 @@ export async function POST(req) {
     Return ONLY the enhanced bullet text string. No quotes, no explanation.
     `;
 
-    const completion = await openai.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        { role: "system", content: "You are an expert resume writer." },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.7
+    const message = await anthropic.messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 256,
+      system: "You are an expert resume writer.",
+      messages: [{ role: "user", content: prompt }],
     });
 
-    const enhancedText = completion.choices[0]?.message?.content?.trim();
+    const enhancedText = firstText(message.content).trim();
 
     return NextResponse.json({ output: enhancedText });
 
