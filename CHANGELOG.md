@@ -1,5 +1,43 @@
 # Changelog
 
+## [v1.1.1] — 2026-07-21
+
+**Task:** SP-RB-01 verification pass — confirm the 2026-07-10 implementation (v1.1.0) actually works, not just that it was committed. No code changes; QA only.
+**Branch:** none (verified against `main`; the `sp-rb-01-movable-sections` branch on origin is identical to `main`, safe to delete)
+**Status:** Verified — all 7 acceptance items pass; production deployment confirmed live
+
+**What was checked (dev server, real interaction, not code-only):**
+1. Drag-to-reorder: simulated a real pointer drag (dnd-kit PointerSensor) dragging Experience over Summary. Confirmed via dnd-kit's own a11y announcement ("Draggable item summary was dropped over droppable area experience") and visible reorder in both the sidebar and Live Preview simultaneously.
+2. Identity stayed pinned at position 0 throughout — no drag handle rendered for it, unaffected by the Summary/Experience swap.
+3. Refresh persistence: reloaded the page after the drag: Experience/Summary order held, confirming it's real `localStorage` auto-save, not just React state.
+4. Additional Links: clicked "+ Add Link", filled Label="GitHub"/URL="github.com/dangarza". Confirmed it rendered in the Live Preview contact block (`linkedin.com/... | github.com/dangarza`) with `https://` auto-prepended on the href and protocol stripped for display text.
+5. Empty state: confirmed the pre-link layout showed no extra separator/line — matches "zero visual change" requirement.
+6. ATS Tailor: read `applyTailoring()` (`ResumeBuilder.tsx:362-374`) — it spreads `{ ...resumeData }` and only overwrites `summary`/appends `skills`; `sectionOrder` and `additionalLinks` pass through untouched. No snap-back risk.
+7. Export freshness: triggered the real Word export (`exportToWord`) by intercepting `URL.createObjectURL` and reading the generated Blob — confirmed it contained the GitHub link and had Experience before Summary in the exported HTML, proving it reads the live `#resume-preview` DOM at click time, not a stale copy. PDF export uses the same `#resume-preview` DOM via print CSS (`exportToPDF`), so the same guarantee applies structurally; couldn't capture actual print dialog output in this environment.
+
+**Also checked (out of sprint scope, per Dan's request):**
+- Production status: `resume.aifrienddan.com` returns HTTP 200 and Vercel shows a Ready production deployment from ~11 days ago. The earlier "live: false" flag was stale/wrong, not a real issue.
+- Found: the Vercel MCP connector (scoped to team `hchy`) returns zero projects for this repo, even though the `vercel` CLI (same `hchy` scope, logged in as `dangarza-1031`) sees it fine — likely a stale/mismatched MCP auth token, separate from this sprint.
+
+**Environment note:** the Browser pane's visual/pointer-click automation (`computer` tool: screenshot, click, drag) was non-functional this session ("pane not displayed, not compositing frames"). Worked around it by dispatching real `PointerEvent`/`Event` sequences directly via the JS console against the live page — this exercises the actual dnd-kit sensors and React input handlers (not internal state mutation), so it's a legitimate substitute, but it's less conclusive than an actual mouse-driven click test. Recommend a manual once-over in a real browser if that's easy for Dan to do.
+
+**Files touched:** `CHANGELOG.md` only.
+
+**Commands run (PowerShell — `C:\Users\danimal\Documents\project_workspace\resume-builder-pro`):**
+```
+vercel ls resume-builder-pro
+vercel domains inspect resume.aifrienddan.com
+Invoke-WebRequest https://resume.aifrienddan.com
+```
+Dev server run via Claude Browser's `preview_start` (npm run dev -p 3411), stopped at end of session.
+
+**Decisions made:**
+- Did not delete the redundant `sp-rb-01-movable-sections` branch (identical to `main`) — flagging for Dan to clean up rather than acting unilaterally on a repo branch.
+
+**Follow-ups:**
+- Dan: confirm/reauthorize the Vercel MCP connector if you want Claude to query this project's deployments without shelling out to the CLI.
+- Consider a real manual drag-and-drop click-test next time a browser session with working visual automation is available, to fully close out the one soft spot from the original 2026-07-10 session.
+
 ## [v1.1.0] — 2026-07-10
 
 **Task:** SP-RB-01 — Movable Sections + Additional Links (sprint pack) + AI provider migration
